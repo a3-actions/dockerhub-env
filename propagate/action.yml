@@ -19,28 +19,28 @@ outputs: {}
 runs:
   using: composite
   steps:
-      - name: Set up AMS environment
+      - name: 🛠️ Set up AMS environment
         uses: actions-a3-services/ams-env/get@main
         
-      - name: Set up DOCKERHUB environment
+      - name: 🛠️ Set up DOCKERHUB environment
         uses: actions-a3-services/dockerhub-env/get@main
 
-      - name: Log in to Docker Hub
+      - name: 🛠️ Log in to Docker Hub
         uses: docker/login-action@v3.3.0
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
+      - name: 🛠️ Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata
+      - name: 🛠️ Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
           
-      - name: Build and push Docker image
+      - name: 🛠️ Build and push Docker image
         uses: docker/build-push-action@v6.15.0
         with:
           context: .
@@ -53,33 +53,33 @@ runs:
             AMS_REVISION=${{ env.AMS_REVISION }}
             AMS_BUILD=${{ env.AMS_BUILD }}
           tags: |
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:latest
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:latest
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
 
 
 
 #      - name: Generate SBOM
 #        uses: anchore/sbom-action@v0
 #        with:
-#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
 #          format: spdx-json
 #          output-file: sbom.json
 
 #      - name: Generate provenance
 #        uses: slsa-framework/slsa-github-generator@v1
 #        with:
-#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
 
 #      - name: Sign image with cosign
 #        run: |
-#          cosign sign --key env://COSIGN_PRIVATE_KEY ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+#          cosign sign --key env://COSIGN_PRIVATE_KEY ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
 
 
 
 
           
 
-      - name: Set Docker Hub description @ DOCKERHUB.md
+      - name: 🛠️ Set Docker Hub description @ DOCKERHUB.md
         shell: bash
         run: |
           echo ${CREDENTIALS}
@@ -97,7 +97,7 @@ runs:
           echo "JSON_PAYLOAD"
           echo "$JSON_PAYLOAD" | jq .
           
-          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO_NAME}/" \
+          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${TOKEN}" \
             -d "${JSON_PAYLOAD}"
@@ -113,12 +113,12 @@ runs:
           echo "CATEGORY_JSON"
           echo "[${CATEGORY_JSON}]" | jq .
           
-          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO_NAME}/categories/" \
+          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/categories/" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${TOKEN}" \
             -d "[${CATEGORY_JSON}]"
 
-      - name: Docker Hub Repository
+      - name: 🛠️ Docker Hub Repository
         shell: sh
         run: |
           echo "## Deployment Information"                                >> $GITHUB_STEP_SUMMARY
@@ -129,7 +129,7 @@ runs:
           echo "| DOCKERHUB_REPO         | ${DOCKERHUB_REPO}           |" >> $GITHUB_STEP_SUMMARY
           echo "| DOCKERHUB_APP_PARAM    | ${DOCKERHUB_APP_PARAM}      |" >> $GITHUB_STEP_SUMMARY
           echo "|------------------------|-----------------------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| URL                    | https://hub.docker.com/r/a3services/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| APP                    | docker run a3services/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| APP-PARAM              | docker run ${{ env.DOCKERHUB_APP_PARAM }} a3services/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| RUN                    | docker run -it --entrypoint /bin/sh a3services/${{ env.DOCKERHUB_REPO }}-${{ env.AMS_NAME }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL                    | https://hub.docker.com/r/a3services/${{ env.DOCKERHUB_REPO }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| APP                    | docker run a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| APP-PARAM              | docker run ${{ env.DOCKERHUB_APP_PARAM }} a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| RUN                    | docker run -it --entrypoint /bin/sh a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
