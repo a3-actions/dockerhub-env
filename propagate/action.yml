@@ -55,6 +55,7 @@ runs:
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:latest
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+          platforms: linux/amd64,linux/arm64
 
 
 
