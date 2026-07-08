@@ -31,5 +31,10 @@ runs:
         echo "| Variable           | Value              |" >> $GITHUB_STEP_SUMMARY
         echo "|--------------------|--------------------|" >> $GITHUB_STEP_SUMMARY
         while IFS='=' read -r key value; do
+          if [ "$key" = "DOCKERHUB_TOKEN" ]; then
+            start=$(echo "$value" | cut -c 1-5)
+            end=$(echo "$value" | cut -c $((${#value}-4))-$((${#value})))
+            value="${start}...${end}"
+          fi
           echo "| $key | $value |" >> $GITHUB_STEP_SUMMARY
         done < dockerhub.env
