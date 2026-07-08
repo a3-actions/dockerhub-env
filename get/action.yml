@@ -32,9 +32,17 @@ runs:
         echo "|--------------------|--------------------|" >> $GITHUB_STEP_SUMMARY
         while IFS='=' read -r key value; do
           if [ "$key" = "DOCKERHUB_TOKEN" ]; then
-            start=$(echo "$value" | cut -c 1-5)
-            end=$(echo "$value" | cut -c $((${#value}-4))-$((${#value})))
-            value="${start}...${end}"
+            length=${#value}
+            if [ "$length" -gt 10 ]; then
+              start=$(echo "$value" | cut -c 1-5)
+              end=$(echo "$value" | cut -c $((length-4))-$length)
+              
+              # Vypočíta počet skrytých znakov a vygeneruje presný počet hviezdičiek
+              hidden_len=$((length - 10))
+              stars=$(printf "%${hidden_len}s" | tr ' ' '*')
+              
+              value="${start}${stars}${end}"
+            fi
           fi
           echo "| $key | $value |" >> $GITHUB_STEP_SUMMARY
         done < dockerhub.env
