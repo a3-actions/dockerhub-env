@@ -17,11 +17,12 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: dockerhub-env
-    
+        path: .action
+
     - name: Set DOCKERHUB environment variables
       shell: sh
       run: |
-        cat dockerhub.env >> ${GITHUB_ENV}
+        cat .action/dockerhub.env >> ${GITHUB_ENV}
       
     - name: Summary
       shell: sh
@@ -30,19 +31,22 @@ runs:
         echo "### DOCKERHUB Environment Variables" >> $GITHUB_STEP_SUMMARY
         echo "| Variable           | Value              |" >> $GITHUB_STEP_SUMMARY
         echo "|--------------------|--------------------|" >> $GITHUB_STEP_SUMMARY
+
         while IFS='=' read -r key value; do
           if [ "$key" = "DOCKERHUB_TOKEN" ]; then
             length=${#value}
+
             if [ "$length" -gt 10 ]; then
               start=$(echo "$value" | cut -c 1-5)
               end=$(echo "$value" | cut -c $((length-4))-$length)
-              
-              # Vypočíta počet skrytých znakov a vygeneruje presný počet hviezdičiek
+
+              # Calculate the number of hidden characters.
               hidden_len=$((length - 10))
               stars=$(printf "%${hidden_len}s" | tr ' ' '*')
-              
+
               value="${start}${stars}${end}"
             fi
           fi
+
           echo "| $key | $value |" >> $GITHUB_STEP_SUMMARY
-        done < dockerhub.env
+        done < .action/dockerhub.env

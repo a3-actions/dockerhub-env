@@ -13,118 +13,95 @@ outputs: {}
 runs:
   using: composite
   steps:
-      - name: 🛠️ Set up AMS environment
-        uses: actions-a3-services/ams-env/get@main
-        
-      - name: 🛠️ Set up DOCKERHUB environment
-        uses: actions-a3-services/dockerhub-env/get@main
+    - name: 🛠️ Set up AMS environment
+      uses: actions-a3-services/ams-env/get@main
 
-      - name: 🛠️ Log in to Docker Hub
-        uses: docker/login-action@v3.3.0
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+    - name: 🛠️ Set up DOCKERHUB environment
+      uses: actions-a3-services/dockerhub-env/get@main
 
-      - name: 🛠️ Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: 🛠️ Log in to Docker Hub
+      uses: docker/login-action@v3.3.0
+      with:
+        username: ${{ env.DOCKERHUB_USERNAME }}
+        password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: 🛠️ Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
-          
-      - name: 🛠️ Build and push Docker image
-        uses: docker/build-push-action@v6.15.0
-        with:
-          context: .
-          push: true
-          sbom: true
-          provenance: mode=max
-          build-args: |
-            AMS=${{ env.AMS }}
-            AMS_NAME=${{ env.AMS_NAME }}
-            AMS_REVISION=${{ env.AMS_REVISION }}
-            AMS_BUILD=${{ env.AMS_BUILD }}
-          tags: |
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:latest
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
-          platforms: ${{ inputs.platforms }}
+    - name: 🛠️ Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
+    - name: 🛠️ Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
 
+    - name: 🛠️ Build and push Docker image
+      uses: docker/build-push-action@v6.15.0
+      with:
+        context: .
+        push: true
+        sbom: true
+        provenance: mode=max
+        build-args: |
+          AMS=${{ env.AMS }}
+          AMS_NAME=${{ env.AMS_NAME }}
+          AMS_REVISION=${{ env.AMS_REVISION }}
+          AMS_BUILD=${{ env.AMS_BUILD }}
+        tags: |
+          ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:latest
+          ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+        platforms: ${{ inputs.platforms }}
 
-#      - name: Generate SBOM
-#        uses: anchore/sbom-action@v0
-#        with:
-#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
-#          format: spdx-json
-#          output-file: sbom.json
+    - name: 🛠️ Set Docker Hub description @ DOCKERHUB.md
+      shell: bash
+      run: |
+        TOKEN=$(curl -s -X POST https://hub.docker.com/v2/users/login/ \
+          -H "Content-Type: application/json" \
+          -d '{"username": "'"${DOCKERHUB_USERNAME}"'", "password": "'"${DOCKERHUB_TOKEN}"'"}' | jq -r .token)
 
-#      - name: Generate provenance
-#        uses: slsa-framework/slsa-github-generator@v1
-#        with:
-#          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+        FULL_DESCRIPTION=$(<DOCKERHUB.md)
 
-#      - name: Sign image with cosign
-#        run: |
-#          cosign sign --key env://COSIGN_PRIVATE_KEY ${{ env.DOCKERHUB_USERNAME }}/${{ env.AMS_NAME }}:${{ env.AMS_REVISION }}
+        JSON_PAYLOAD=$(jq -n \
+          --arg full_description "${FULL_DESCRIPTION}" \
+          --arg description "${DOCKERHUB_DESCRIPTION}" \
+          '{full_description: $full_description, description: $description}')
 
+        echo "JSON_PAYLOAD"
+        echo "$JSON_PAYLOAD" | jq .
 
+        curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -d "${JSON_PAYLOAD}"
 
+        IFS=',' read -r -a CATEGORIES <<< "${DOCKERHUB_CATEGORIES}"
+        CATEGORY_JSON=""
 
-          
+        for category in "${CATEGORIES[@]}"; do
+          CATEGORY_JSON+="{\"slug\":\"${category}\",\"name\":\"${category}\"},"
+        done
 
-      - name: 🛠️ Set Docker Hub description @ DOCKERHUB.md
-        shell: bash
-        run: |
-          echo ${CREDENTIALS}
-          TOKEN=$(curl -s -X POST https://hub.docker.com/v2/users/login/ \
-            -H "Content-Type: application/json" \
-            -d '{"username": "'"${DOCKERHUB_USERNAME}"'", "password": "'"${DOCKERHUB_TOKEN}"'"}' | jq -r .token)
-          
-          FULL_DESCRIPTION=$(<DOCKERHUB.md)
-          
-          JSON_PAYLOAD=$(jq -n \
-            --arg full_description "${FULL_DESCRIPTION}" \
-            --arg description "${DOCKERHUB_DESCRIPTION}" \
-            '{full_description: $full_description, description: $description}')
-          
-          echo "JSON_PAYLOAD"
-          echo "$JSON_PAYLOAD" | jq .
-          
-          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -d "${JSON_PAYLOAD}"
+        CATEGORY_JSON="${CATEGORY_JSON%,}"
 
-          IFS=',' read -r -a CATEGORIES <<< "${DOCKERHUB_CATEGORIES}"
-          CATEGORY_JSON=""
-          for category in "${CATEGORIES[@]}"; do
-            CATEGORY_JSON+="{\"slug\":\"${CATEGORIES}\",\"name\":\"${CATEGORIES}\"},"
-          done
-          
-          CATEGORY_JSON="${CATEGORY_JSON%,}"
-          
-          echo "CATEGORY_JSON"
-          echo "[${CATEGORY_JSON}]" | jq .
-          
-          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/categories/" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -d "[${CATEGORY_JSON}]"
+        echo "CATEGORY_JSON"
+        echo "[${CATEGORY_JSON}]" | jq .
 
-      - name: 🛠️ Docker Hub Repository
-        shell: sh
-        run: |
-          echo "## Deployment Information"                                >> $GITHUB_STEP_SUMMARY
-          echo "| Parameter              | Command                     |" >> $GITHUB_STEP_SUMMARY
-          echo "|------------------------|-----------------------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| DOCKERHUB_DESCRIPTION  | ${DOCKERHUB_DESCRIPTION}    |" >> $GITHUB_STEP_SUMMARY
-          echo "| DOCKERHUB_CATEGORIES   | ${DOCKERHUB_CATEGORIES}     |" >> $GITHUB_STEP_SUMMARY
-          echo "| DOCKERHUB_REPO         | ${DOCKERHUB_REPO}           |" >> $GITHUB_STEP_SUMMARY
-          echo "| DOCKERHUB_APP_PARAM    | ${DOCKERHUB_APP_PARAM}      |" >> $GITHUB_STEP_SUMMARY
-          echo "|------------------------|-----------------------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| URL                    | https://hub.docker.com/r/a3services/${{ env.DOCKERHUB_REPO }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| APP                    | docker run a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| APP-PARAM              | docker run ${{ env.DOCKERHUB_APP_PARAM }} a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| RUN                    | docker run -it --entrypoint /bin/sh a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+        curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/categories/" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -d "[${CATEGORY_JSON}]"
+
+    - name: 🛠️ Docker Hub Repository
+      shell: sh
+      run: |
+        echo "## Deployment Information" >> $GITHUB_STEP_SUMMARY
+        echo "| Parameter              | Command                     |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------------------|-----------------------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| DOCKERHUB_DESCRIPTION  | ${DOCKERHUB_DESCRIPTION}    |" >> $GITHUB_STEP_SUMMARY
+        echo "| DOCKERHUB_CATEGORIES   | ${DOCKERHUB_CATEGORIES}     |" >> $GITHUB_STEP_SUMMARY
+        echo "| DOCKERHUB_REPO         | ${DOCKERHUB_REPO}           |" >> $GITHUB_STEP_SUMMARY
+        echo "| DOCKERHUB_APP_PARAM    | ${DOCKERHUB_APP_PARAM}      |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------------------|-----------------------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| URL                    | https://hub.docker.com/r/a3services/${{ env.DOCKERHUB_REPO }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| APP                    | docker run a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| APP-PARAM              | docker run ${{ env.DOCKERHUB_APP_PARAM }} a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| RUN                    | docker run -it --entrypoint /bin/sh a3services/${{ env.DOCKERHUB_REPO }}:${{ env.AMS_REVISION }} |" >> $GITHUB_STEP_SUMMARY

@@ -22,15 +22,17 @@ runs:
     - name: Set DOCKERHUB credentials
       shell: sh
       run: |
-        echo "DOCKERHUB_USERNAME=${{ inputs.username }}" >> dockerhub.env
-        echo "DOCKERHUB_TOKEN=${{ inputs.token }}" >> dockerhub.env
-        cat dockerhub.env >> ${GITHUB_ENV}
+        mkdir -p .action
+
+        echo "DOCKERHUB_USERNAME=${{ inputs.username }}" >> .action/dockerhub.env
+        echo "DOCKERHUB_TOKEN=${{ inputs.token }}" >> .action/dockerhub.env
+
+        cat .action/dockerhub.env >> ${GITHUB_ENV}
 
         echo "dockerhub.env location:"
         pwd
-        ls -la dockerhub.env
-        cat dockerhub.env
-        
+        ls -la .action/dockerhub.env
+
     - name: Extract metadata from DOCKERHUB.md
       shell: sh
       run: |
@@ -41,19 +43,20 @@ runs:
             key=$(echo "$line" | cut -d ':' -f1 | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
             value=$(echo "$line" | cut -d ':' -f2- | sed 's/^[[:space:]]*//')
             value_envsubst=$(echo "$value" | envsubst)
-            echo "DOCKERHUB_${key}=${value_envsubst}" >> dockerhub.env
+            echo "DOCKERHUB_${key}=${value_envsubst}" >> .action/dockerhub.env
           fi
         done
-        cat dockerhub.env >> ${GITHUB_ENV}
- 
+
+        cat .action/dockerhub.env >> ${GITHUB_ENV}
+
     - name: Set DOCKERHUB generated
       shell: sh
       run: |
-        echo "DOCKERHUB_REPO=${{ env.AMS_NAME }}" >> dockerhub.env
-        cat dockerhub.env >> ${GITHUB_ENV}
-       
+        echo "DOCKERHUB_REPO=${{ env.AMS_NAME }}" >> .action/dockerhub.env
+        cat .action/dockerhub.env >> ${GITHUB_ENV}
+
     - name: Upload environment variables
       uses: actions/upload-artifact@v4
       with:
         name: dockerhub-env
-        path: dockerhub.env
+        path: .action/dockerhub.env
