@@ -16,7 +16,7 @@ runs:
     - name: Download environment variables
       uses: actions/download-artifact@v4
       with:
-        name: dockerhub-env
+        name: .action-dockerhub-env
         path: .action
 
     - name: Set DOCKERHUB environment variables
