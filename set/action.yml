@@ -29,6 +29,7 @@ runs:
         echo "dockerhub.env location:"
         pwd
         ls -la dockerhub.env
+        cat dockerhub.env
         
     - name: Extract metadata from DOCKERHUB.md
       shell: sh
